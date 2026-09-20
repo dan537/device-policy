@@ -1,0 +1,33 @@
+# Secrets — never commit
+.env
+.env.local
+
+# Signing keys — losing these means no policy updates; leaking them means
+# someone else can ship an update that disables the lock.
+*.jks
+*.keystore
+keystore.properties
+
+# Toolchain downloads (Gradle distribution lives here, not in the repo)
+.tools/
+
+# Android / Gradle build output
+build/
+**/build/
+.gradle/
+**/local.properties
+.idea/
+*.apk
+*.aab
+*.iml
+
+# ...except the release APK under dist/, which the QR enrollment URL points at
+!dist/*.apk
+
+# Verification artifacts
+/vpn.png
+/emulator-*.png
+
+# OS noise
+Thumbs.db
+desktop.ini

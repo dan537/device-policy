@@ -1,0 +1,103 @@
+# Adult sites — applied to BOTH profiles.
+#
+# The "porn" category filter and the NSFW blocklists do the heavy lifting.
+# These are pinned explicitly so a category-list regression cannot silently
+# unblock the largest sites.
+#
+# Lines starting with # and blank lines are ignored.
+# NextDNS denylist entries match the domain AND all its subdomains.
+
+# Tube sites
+pornhub.com
+phncdn.com
+xvideos.com
+xvideos-cdn.com
+xnxx.com
+xhamster.com
+xhcdn.com
+redtube.com
+youporn.com
+tube8.com
+spankbang.com
+eporner.com
+txxx.com
+hqporner.com
+porntrex.com
+beeg.com
+youjizz.com
+motherless.com
+xtube.com
+porn.com
+sex.com
+thumbzilla.com
+pornone.com
+upornia.com
+vporn.com
+
+# Studios / paid
+brazzers.com
+onlyfans.com
+fansly.com
+mym.fans
+manyvids.com
+
+# Cam sites
+chaturbate.com
+stripchat.com
+bongacams.com
+cam4.com
+myfreecams.com
+livejasmin.com
+camsoda.com
+flirt4free.com
+
+# Hentai / drawn
+rule34.xxx
+rule34video.com
+e-hentai.org
+exhentai.org
+nhentai.net
+nhentai.to
+hanime.tv
+hentaihaven.xxx
+hentaimama.io
+gelbooru.com
+danbooru.donmai.us
+safebooru.org
+sankakucomplex.com
+luscious.net
+
+# Aggregators / galleries
+erome.com
+fapello.com
+nudevista.com
+scrolller.com
+coomer.su
+kemono.su
+porngo.com
+sxyprn.com
+
+# Deepfake / non-consensual
+adultdeepfakes.com
+mrdeepfakes.com
+
+# NSFW AI generators and companion chat
+candy.ai
+janitorai.com
+spicychat.ai
+crushon.ai
+charstar.ai
+soulgen.net
+pornpen.ai
+promptchan.ai
+deepnude.cc
+undress.app
+clothoff.io
+unstability.ai
+
+# Image boards
+4chan.org
+4channel.org
+4cdn.org
+8kun.top
+lainchan.org

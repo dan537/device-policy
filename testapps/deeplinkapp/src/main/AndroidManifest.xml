@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Deep Link App">
+        <!--
+            Shaped like an ordinary app with web deep links (a bank, a retailer,
+            a streaming service): http/https but pinned to a specific HOST and
+            PATH. PolicyEngine must NOT suspend this.
+
+            This is the more important half of the test. Over-matching would
+            suspend everyday apps on a device whose policy cannot be removed
+            and which has no unlock path.
+        -->
+        <activity
+            android:name="android.app.Activity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="bank.example.com" android:pathPrefix="/app" />
+                <data android:scheme="http" android:host="bank.example.com" android:pathPrefix="/app" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

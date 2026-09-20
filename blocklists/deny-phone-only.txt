@@ -1,0 +1,40 @@
+# PHONE PROFILE ONLY (f5b1aa).
+#
+# Discord and Telegram are blocked on the phone but deliberately left working
+# on the PC, because the PC is where the Roblox project collaboration happens.
+#
+# Also blocks NextDNS's own management surfaces so the phone cannot be used to
+# weaken its own filter. The account password is sealed anyway; this removes
+# the temptation rather than relying on it.
+
+# ---------------------------------------------------------------------------
+# Discord
+# ---------------------------------------------------------------------------
+discord.com
+discordapp.com
+discord.gg
+discordapp.net
+discord.media
+discordcdn.com
+discordstatus.com
+
+# ---------------------------------------------------------------------------
+# Telegram
+# ---------------------------------------------------------------------------
+telegram.org
+telegram.me
+t.me
+telegra.ph
+telesco.pe
+tdesktop.com
+telegramcdn.com
+
+# ---------------------------------------------------------------------------
+# NextDNS management surfaces — NOT the resolver
+# ---------------------------------------------------------------------------
+# f5b1aa.dns.nextdns.io must keep resolving, so only these specific
+# subdomains are listed. Never add the bare "nextdns.io".
+my.nextdns.io
+api.nextdns.io
+account.nextdns.io
+help.nextdns.io

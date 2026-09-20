@@ -1,0 +1,28 @@
+# Reddit — applied to BOTH profiles.
+#
+# Blocking these kills the website and the Android app, which talks to the
+# same hosts. Third-party clients and mirrors are included because they are
+# the obvious next step once the official app stops working.
+
+reddit.com
+redd.it
+redditmedia.com
+redditstatic.com
+reddit.map.fastly.net
+redditinc.com
+redditblog.com
+reddithelp.com
+
+# Third-party clients, frontends and mirrors
+teddit.net
+libreddit.com
+redlib.matthew.science
+redditp.com
+reddit.pages.dev
+unddit.com
+reveddit.com
+camelcamelcamel-reddit.com
+i.rarchives.com
+
+# Image host used overwhelmingly as a Reddit adjunct, and hosts NSFW itself
+imgur.com

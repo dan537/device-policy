@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+        REQUIRED for Private DNS to work, which is not obvious.
+
+        setGlobalPrivateDnsModeSpecifiedHost() validates the resolver by
+        performing a TLS handshake on port 853, and that check runs client-side
+        inside THIS process (android.net.PrivateDnsConnectivityChecker). Without
+        INTERNET the socket() call fails with EPERM, the validation returns
+        PRIVATE_DNS_SET_ERROR_HOST_NOT_SERVING, and Private DNS is never set —
+        silently, while every other restriction applies normally. Caught on the
+        emulator; it would have failed identically on the real device.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Needed to enumerate installed browsers on API 30+. Package visibility
+        filtering would otherwise hide most apps from queryIntentActivities,
+        and a browser we cannot see is a browser we cannot suspend.
+        This app is sideloaded / QR-provisioned, never published to Play, so
+        the Play policy restrictions on this permission do not apply.
+    -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Belt-and-braces alongside QUERY_ALL_PACKAGES. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true">
+
+        <!--
+            NO LAUNCHER ACTIVITY.
+
+            There is deliberately no icon and no screen the user can open.
+            Combined with the absence of any disable/unlock code path, this is
+            what makes "there is no off switch" literally true rather than a
+            matter of willpower.
+        -->
+
+        <receiver
+            android:name=".AdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            Both of these handlers are MANDATORY on Android 11+. Without them
+            QR enrollment fails outright, on a device that has just been wiped.
+        -->
+        <activity
+            android:name=".GetProvisioningModeActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.app.action.GET_PROVISIONING_MODE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PolicyComplianceActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.app.action.ADMIN_POLICY_COMPLIANCE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+            <!--
+                Separate filter: MY_PACKAGE_REPLACED carries no data URI, so it
+                cannot share a filter that declares <data android:scheme="package">.
+                This is what makes a sideloaded policy update take effect
+                immediately instead of waiting for a reboot.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Best-effort fast reaction to a new install; the worker is the guarantee. -->
+        <receiver
+            android:name=".PackageWatcher"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.PACKAGE_CHANGED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

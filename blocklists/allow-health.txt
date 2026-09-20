@@ -1,0 +1,108 @@
+# Allowlist for the PHONE profile (f5b1aa).
+#
+# NextDNS allowlist entries take PRECEDENCE over the denylist, category
+# filters and blocklists. Anything here will resolve no matter what else
+# says otherwise.
+#
+# Purpose: NSFW and "adult" blocklists routinely misclassify clinical,
+# sexual-health and addiction-recovery content. Without this file, the
+# filter can block the route out. Clinical content is not what drives the
+# compulsion, so the cost of allowlisting is close to zero.
+#
+# Keep this list to genuine health, medical and recovery resources.
+
+# ---------------------------------------------------------------------------
+# Crisis and mental health (UK)
+# ---------------------------------------------------------------------------
+samaritans.org
+giveusashout.org
+mind.org.uk
+rethink.org
+mentalhealth.org.uk
+nhs.uk
+111.nhs.uk
+england.nhs.uk
+hubofhope.co.uk
+
+# ---------------------------------------------------------------------------
+# Crisis (international fallback)
+# ---------------------------------------------------------------------------
+findahelpline.com
+befrienders.org
+988lifeline.org
+
+# ---------------------------------------------------------------------------
+# Clinical and medical reference
+# ---------------------------------------------------------------------------
+patient.info
+netdoctor.co.uk
+bupa.co.uk
+mayoclinic.org
+clevelandclinic.org
+healthline.com
+webmd.com
+medlineplus.gov
+nih.gov
+nlm.nih.gov
+ncbi.nlm.nih.gov
+pubmed.ncbi.nlm.nih.gov
+who.int
+cdc.gov
+nice.org.uk
+bmj.com
+thelancet.com
+psychologytoday.com
+verywellmind.com
+verywellhealth.com
+
+# ---------------------------------------------------------------------------
+# Sexual health services and education
+# ---------------------------------------------------------------------------
+# Frequently caught by porn-category filters despite being clinical.
+brook.org.uk
+sexwise.org.uk
+fpa.org.uk
+tht.org.uk
+shl.uk
+sh24.org.uk
+plannedparenthood.org
+ashasexualhealth.org
+
+# ---------------------------------------------------------------------------
+# Addiction and recovery — porn / sex / compulsive behaviour
+# ---------------------------------------------------------------------------
+saa-recovery.org
+sa.org
+slaafws.org
+sexhelp.com
+yourbrainonporn.com
+rebootnation.org
+nofap.com
+fortifyprogram.org
+covenanteyes.com
+integrityrestored.com
+pornaddiction.com
+therecoveryvillage.com
+
+# ---------------------------------------------------------------------------
+# Addiction and recovery — general
+# ---------------------------------------------------------------------------
+smartrecovery.org
+smartrecovery.org.uk
+alcoholics-anonymous.org.uk
+aa.org
+na.org
+ukna.org
+rehab4addiction.co.uk
+wearewithyou.org.uk
+actiononaddiction.org.uk
+talktofrank.com
+
+# ---------------------------------------------------------------------------
+# Therapy and counselling directories
+# ---------------------------------------------------------------------------
+bacp.co.uk
+counselling-directory.org.uk
+psychotherapy.org.uk
+cosrt.org.uk
+atsac.co.uk

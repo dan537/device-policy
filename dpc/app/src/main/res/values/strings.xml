@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Deliberately unremarkable: this shows in Settings > Device admin apps. -->
+    <string name="app_name">Device Policy</string>
+</resources>

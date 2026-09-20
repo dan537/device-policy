@@ -1,0 +1,131 @@
+# Bypass tooling — applied to BOTH profiles.
+#
+# NextDNS's own "Block Bypass Methods" toggle is enabled as well, but it only
+# blocks VPN *marketing sites*, not the API hosts their apps actually call.
+# That gap is documented and reproducible (ProtonVPN, Mullvad and IVPN apps
+# all connect through it). On the phone, DISALLOW_CONFIG_VPN is the real
+# defence; this file is the second layer.
+
+# ---------------------------------------------------------------------------
+# VPN app backends and sites
+# ---------------------------------------------------------------------------
+api.protonvpn.ch
+api.protonmail.ch
+protonvpn.com
+api.mullvad.net
+mullvad.net
+api.nordvpn.com
+nordvpn.com
+api.surfshark.com
+surfshark.com
+expressvpn.com
+api.expressvpn.com
+windscribe.com
+api.windscribe.com
+ivpn.net
+api.ivpn.net
+privateinternetaccess.com
+privateinternetaccess.net
+cyberghostvpn.com
+tunnelbear.com
+api.tunnelbear.com
+hide.me
+api.hide.me
+cloudflareclient.com
+engage.cloudflareclient.com
+zoogvpn.com
+atlasvpn.com
+hotspotshield.com
+psiphon.ca
+psiphon3.com
+lantern.io
+getlantern.org
+vpngate.net
+softether.org
+vyprvpn.com
+purevpn.com
+ipvanish.com
+strongvpn.com
+torguard.net
+airvpn.org
+perfect-privacy.com
+azirevpn.com
+oovpn.net
+vpnbook.com
+freeopenvpn.org
+
+# ---------------------------------------------------------------------------
+# Tor
+# ---------------------------------------------------------------------------
+torproject.org
+bridges.torproject.org
+snowflake.torproject.net
+tor2web.org
+onion.to
+onion.ws
+tor.link
+
+# ---------------------------------------------------------------------------
+# Web proxies and "unblocker" services
+# ---------------------------------------------------------------------------
+croxyproxy.com
+croxyproxy.rocks
+proxysite.com
+proxysite.cloud
+kproxy.com
+4everproxy.com
+hidester.com
+blockaway.net
+plainproxies.com
+proxyium.com
+freeproxy.io
+unblockit.link
+whateverorigin.org
+zalmos.com
+hidemyass.com
+megaproxy.com
+dontfilter.us
+filterbypass.me
+proxfree.com
+
+# ---------------------------------------------------------------------------
+# Third-party encrypted DNS resolvers
+# ---------------------------------------------------------------------------
+# Stops an app or browser resolving around the locked Private DNS.
+#
+# !! Do NOT add "nextdns.io" or "dns.nextdns.io" here. Those are the
+# resolver this whole setup depends on. Blocking them takes the device
+# offline entirely.
+dns.google
+dns64.dns.google
+cloudflare-dns.com
+one.one.one.one
+mozilla.cloudflare-dns.com
+security.cloudflare-dns.com
+family.cloudflare-dns.com
+dns.quad9.net
+doh.opendns.com
+dns.opendns.com
+familyshield.opendns.com
+resolver1.opendns.com
+dns.adguard.com
+dns.adguard-dns.com
+dns-family.adguard.com
+unfiltered.adguard-dns.com
+doh.cleanbrowsing.org
+doh.familyshield.cleanbrowsing.org
+dns.sb
+doh.sb
+dnsforge.de
+doh.mullvad.net
+dns.controld.com
+freedns.controld.com
+dns.alidns.com
+doh.pub
+dot.pub
+dns.twnic.tw
+odvr.nic.cz
+dnscrypt.info
+dnscrypt.ca
+dns.digitale-gesellschaft.ch
+dns.njal.la

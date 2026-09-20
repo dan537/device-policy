@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <!--
+            USES_POLICY_WIPE_DATA is deliberately NOT declared.
+
+            Without it, DevicePolicyManager.wipeData() cannot be called by this
+            app at all, even if code were added later that tried. The escape
+            hatch is meant to be a deliberate recovery-mode wipe by a human
+            holding the phone, not something the app can trigger.
+        -->
+        <force-lock />
+        <limit-password />
+    </uses-policies>
+</device-admin>
