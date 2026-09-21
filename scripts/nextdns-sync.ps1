@@ -11,23 +11,23 @@
       parentalControl   porn category + SafeSearch + blockBypass (both);
                         reddit/discord/telegram services (phone only)
       privacy           ad/tracker blocklists (both) + NSFW list (phone)
-      denylist          blocklists\*.txt merged per profile
+      denylist          blocklists\*.txt merged per profile (PUT as one
+                        array - the API rate-limits per-domain POSTs)
       allowlist         allow-health.txt (both profiles: the same
                         misclassification applies on the PC)
       settings          block page enabled
 
-    The API key is never printed. Per-call failures are reported without
-    aborting the run, so one bad domain can't block the rest.
+    Declarative: each array is PUT wholesale, so re-running is idempotent.
+    The API key is never printed.
 
 .USAGE
     powershell -ExecutionPolicy Bypass -File scripts\nextdns-sync.ps1
-    powershell -ExecutionPolicy Bypass -File scripts\nextdns-sync.ps1 -WhatIf
 #>
 
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding()]
 param(
-    [string]$EnvFile = (Join-Path $PSScriptRoot '..\.env'),
-    [string]$ListDir = (Join-Path $PSScriptRoot '..\blocklists')
+    [string]$EnvFile = '',
+    [string]$ListDir = ''
 )
 
 Set-StrictMode -Version Latest
@@ -36,9 +36,20 @@ $ErrorActionPreference = 'Stop'
 
 $ApiBase = 'https://api.nextdns.io'
 
+$scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $EnvFile) { $EnvFile = Join-Path $scriptDir '..\.env' }
+if (-not $ListDir) { $ListDir = Join-Path $scriptDir '..\blocklists' }
+
 # --------------------------------------------------------------------------
-# .env parsing
+# Helpers that survive Set-StrictMode (missing-property access throws there).
 # --------------------------------------------------------------------------
+function Get-Prop($Obj, [string]$Name) {
+    if ($null -eq $Obj) { return $null }
+    $p = $Obj.PSObject.Properties[$Name]
+    if ($null -ne $p) { return $p.Value }
+    return $null
+}
+
 function Read-DotEnv([string]$Path) {
     if (-not (Test-Path $Path)) { throw ".env not found at $Path. Copy .env.example and fill in NEXTDNS_API_KEY." }
     $map = @{}
@@ -52,9 +63,6 @@ function Read-DotEnv([string]$Path) {
     return $map
 }
 
-# --------------------------------------------------------------------------
-# Blocklist file parsing: strip comments/blank lines, lowercase, dedupe.
-# --------------------------------------------------------------------------
 function Read-ListFile([string[]]$Names) {
     $out = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($n in $Names) {
@@ -69,81 +77,73 @@ function Read-ListFile([string[]]$Names) {
     return @($out | Sort-Object)
 }
 
+# Serialize an object[] as a top-level JSON ARRAY even when it has 0/1 items.
+function ConvertTo-JsonArray($Items) {
+    $parts = foreach ($i in @($Items)) { $i | ConvertTo-Json -Depth 10 -Compress }
+    return '[' + ($parts -join ',') + ']'
+}
+
 # --------------------------------------------------------------------------
-# API plumbing. Returns the decoded response; records failures in $script:Failures.
+# API plumbing. Retries 429 with backoff; records failures in $script:Failures.
 # --------------------------------------------------------------------------
 $script:Failures = [System.Collections.Generic.List[string]]::new()
 
 function Invoke-NextDns([string]$Method, [string]$Path, $Body = $null, [string]$Context = '') {
     $uri = "$ApiBase$Path"
-    $params = @{
-        Method      = $Method
-        Uri         = $uri
-        Headers     = @{ 'X-Api-Key' = $script:ApiKey }
-        ContentType = 'application/json'
+    $json = $null
+    if ($null -ne $Body) {
+        if ($Body -is [string]) { $json = $Body } else { $json = $Body | ConvertTo-Json -Depth 10 -Compress }
     }
-    if ($null -ne $Body) { $params.Body = ($Body | ConvertTo-Json -Depth 10 -Compress) }
-    try {
-        $resp = Invoke-RestMethod @params
-        if ($resp.errors) {
-            $detail = ($resp.errors | ForEach-Object { $_.detail }) -join '; '
-            $script:Failures.Add("$Context $Method $Path -> $detail")
+    $attempt = 0
+    while ($true) {
+        $attempt++
+        try {
+            $params = @{
+                Method  = $Method
+                Uri     = $uri
+                Headers = @{ 'X-Api-Key' = $script:ApiKey }
+            }
+            if ($null -ne $json) {
+                $params['ContentType'] = 'application/json'
+                $params['Body'] = $json
+            }
+            $resp = Invoke-RestMethod @params
+            $errs = Get-Prop $resp 'errors'
+            if ($errs) {
+                $detail = (@($errs) | ForEach-Object { "$(Get-Prop $_ 'code'):$(Get-Prop $_ 'detail')" }) -join '; '
+                $script:Failures.Add("$Context $Method $Path -> $detail")
+                return $null
+            }
+            return $resp
+        } catch {
+            $status = $null
+            $detail = $_.Exception.Message
+            $httpResp = Get-Prop $_.Exception 'Response'
+            if ($null -ne $httpResp) {
+                $status = [int](Get-Prop $httpResp 'StatusCode')
+                try {
+                    $sr = New-Object IO.StreamReader($httpResp.GetResponseStream())
+                    $detail = $sr.ReadToEnd()
+                } catch { }
+            }
+            if ($status -eq 429 -and $attempt -le 6) {
+                $wait = [Math]::Min(2 * $attempt, 20)
+                Write-Host "    429 rate-limited; retry ${attempt}/6 in ${wait}s"
+                Start-Sleep -Seconds $wait
+                continue
+            }
+            $script:Failures.Add("$Context $Method $Path -> HTTP $status $detail")
             return $null
         }
-        return $resp
-    } catch {
-        $script:Failures.Add("$Context $Method $Path -> $($_.Exception.Message)")
-        return $null
     }
 }
 
-function Get-AllPages([string]$Path, [string]$Context) {
-    $items = [System.Collections.Generic.List[object]]::new()
-    $cursor = $null
-    do {
-        if ($Path -match '\?') { $sep = '&' } else { $sep = '?' }
-        $p = $Path + $sep + 'limit=500'
-        if ($cursor) { $p += "&cursor=$cursor" }
-        $resp = Invoke-NextDns 'GET' $p -Context $Context
-        if ($null -eq $resp) { return $items }
-        if ($resp.data) { $items.AddRange(@($resp.data)) }
-        $cursor = $resp.meta.pagination.cursor
-    } while ($cursor)
-    return $items
-}
-
-# --------------------------------------------------------------------------
-# Sync a domain list (denylist or allowlist): add missing, re-enable disabled.
-# --------------------------------------------------------------------------
-function Sync-DomainList([string]$Profile, [string]$Kind, [string[]]$Wanted) {
-    $current = Get-AllPages "/profiles/$Profile/$Kind" $Kind
-    $active = @{}; $inactive = @{}
-    foreach ($e in $current) {
-        if ($e.active) { $active[$e.id] = $true } else { $inactive[$e.id] = $true }
+# PUT a whole array endpoint (denylist, allowlist, privacy/blocklists).
+function Sync-ArrayEndpoint([string]$Profile, [string]$Path, [object[]]$Items, [string]$Label) {
+    $json = ConvertTo-JsonArray $Items
+    if (Invoke-NextDns 'PUT' "/profiles/$Profile/$Path" $json $Label) {
+        Write-Host ("    {0,-11} applied ({1} entries)" -f $Label, $Items.Count)
     }
-    $added = 0; $reactivated = 0; $ok = 0
-    foreach ($d in $Wanted) {
-        if ($active.ContainsKey($d)) { $ok++; continue }
-        if ($inactive.ContainsKey($d)) {
-            $enc = [uri]::EscapeDataString($d)
-            if (Invoke-NextDns 'PATCH' "/profiles/$Profile/$Kind/$enc" @{ active = $true } $Kind) { $reactivated++ }
-            continue
-        }
-        if (Invoke-NextDns 'POST' "/profiles/$Profile/$Kind" @{ id = $d; active = $true } $Kind) { $added++ }
-    }
-    Write-Host ("    {0,-9} wanted {1,3} | added {2,3} | reactivated {3} | already ok {4}" -f $Kind, $Wanted.Count, $added, $reactivated, $ok)
-}
-
-function Sync-Blocklists([string]$Profile, [string[]]$Ids) {
-    $current = Get-AllPages "/profiles/$Profile/privacy/blocklists" 'blocklists'
-    $have = @{}
-    foreach ($e in $current) { $have[$e.id] = $true }
-    $added = 0
-    foreach ($id in $Ids) {
-        if ($have.ContainsKey($id)) { continue }
-        if (Invoke-NextDns 'POST' "/profiles/$Profile/privacy/blocklists" @{ id = $id } 'blocklists') { $added++ }
-    }
-    Write-Host ("    blocklists wanted {0} | added {1}" -f $Ids.Count, $added)
 }
 
 # --------------------------------------------------------------------------
@@ -164,8 +164,10 @@ $Security = @{
     csam                    = $true
 }
 
+# Verified list IDs only — an unknown ID makes the whole PATCH 400.
+# NSFW coverage comes from the 'porn' category + our denylist.
 $BlocklistsShared = @('nextdns-recommended', 'oisd')
-$BlocklistsPhone  = $BlocklistsShared + @('oisd-nsfw')
+$BlocklistsPhone  = $BlocklistsShared
 
 $ParentalPc = @{
     categories = @(@{ id = 'porn'; active = $true })
@@ -188,9 +190,12 @@ $ParentalPhone = @{
 
 $Settings = @{ blockPage = @{ enabled = $true } }
 
-$DenyShared = Read-ListFile 'deny-porn.txt', 'deny-bypass.txt', 'deny-reddit.txt'
-$DenyPhone  = $DenyShared + (Read-ListFile 'deny-phone-only.txt')
+$DenyShared  = Read-ListFile 'deny-porn.txt', 'deny-bypass.txt', 'deny-reddit.txt'
+$DenyPhone   = $DenyShared + (Read-ListFile 'deny-phone-only.txt')
 $AllowHealth = Read-ListFile 'allow-health.txt'
+
+function To-Entries([string[]]$Domains) { return @($Domains | ForEach-Object { @{ id = $_; active = $true } }) }
+function To-Ids([string[]]$Ids)         { return @($Ids | ForEach-Object { @{ id = $_ } }) }
 
 # --------------------------------------------------------------------------
 # Main
@@ -212,14 +217,30 @@ foreach ($p in $profiles) {
     if ([string]::IsNullOrWhiteSpace($p.Id)) { Write-Warning "$($p.Label): profile id missing in .env, skipped"; continue }
     Write-Host ""
     Write-Host "== $($p.Label)  profile $($p.Id) =="
-    if ($WhatIfPreference) { Write-Host "    (WhatIf: no changes sent)"; continue }
 
-    if (Invoke-NextDns 'PATCH' "/profiles/$($p.Id)/security" $Security 'security') { Write-Host "    security: applied" }
-    if (Invoke-NextDns 'PATCH' "/profiles/$($p.Id)/parentalControl" $p.Parental 'parentalControl') { Write-Host "    parentalControl: applied" }
-    Sync-Blocklists $p.Id $p.Blocklists
-    Sync-DomainList $p.Id 'denylist' $p.Deny
-    Sync-DomainList $p.Id 'allowlist' $p.Allow
-    if (Invoke-NextDns 'PATCH' "/profiles/$($p.Id)/settings" $Settings 'settings') { Write-Host "    settings: applied" }
+    if (Invoke-NextDns 'PATCH' "/profiles/$($p.Id)/security" $Security 'security') { Write-Host "    security applied" }
+    if (Invoke-NextDns 'PATCH' "/profiles/$($p.Id)/parentalControl" $p.Parental 'parentalControl') { Write-Host "    parentalControl applied" }
+    # privacy is an object endpoint: PATCH {blocklists:[{id}]} rather than
+    # PUT on the array child (which 400s).
+    if (Invoke-NextDns 'PATCH' "/profiles/$($p.Id)/privacy" @{ blocklists = (To-Ids $p.Blocklists) } 'blocklists') {
+        Write-Host ("    {0,-11} applied ({1} lists)" -f 'blocklists', $p.Blocklists.Count)
+    }
+    Sync-ArrayEndpoint $p.Id 'denylist' (To-Entries $p.Deny) 'denylist'
+    Sync-ArrayEndpoint $p.Id 'allowlist' (To-Entries $p.Allow) 'allowlist'
+    if (Invoke-NextDns 'PATCH' "/profiles/$($p.Id)/settings" $Settings 'settings') { Write-Host "    settings applied" }
+
+    # Verify: GET the whole profile and count what actually landed.
+    $check = Invoke-NextDns 'GET' "/profiles/$($p.Id)" -Context 'verify'
+    if ($check) {
+        $d = Get-Prop $check 'data'
+        $deny = @(Get-Prop $d 'denylist'); $allow = @(Get-Prop $d 'allowlist')
+        $cats = @(Get-Prop (Get-Prop $d 'parentalControl') 'categories')
+        $svcs = @(Get-Prop (Get-Prop $d 'parentalControl') 'services')
+        $bls  = @(Get-Prop (Get-Prop $d 'privacy') 'blocklists')
+        $catStr = (@($cats) | ForEach-Object { $_.id }) -join '/'
+        $svcStr = (@($svcs) | Where-Object { $_.active } | ForEach-Object { $_.id }) -join '/'
+        Write-Host "    verify: denylist=$($deny.Count) allowlist=$($allow.Count) categories=$catStr services=$svcStr blocklists=$($bls.Count)"
+    }
 }
 
 Write-Host ""
